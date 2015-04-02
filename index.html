@@ -13,6 +13,8 @@
     </div>
     <script>
       var eventsArray = ['$signup'];
+      var nodesMap = {}, nodesArray = []; // stores our node data
+      var linksMap = {}, linksArray = []; // stores our link data
 
       var eventSelect = $('#eventSelect').MPEventSelect();
 
@@ -23,8 +25,57 @@
         // If events is ['A', 'B', 'C'], this is equivalent to calling
         // MP.api.funnel('A', 'B', 'C') ...
         MP.api.funnel.apply(MP.api, events).done(function(funnelData) {
-          console.log('Results:');
-          console.log(funnelData);
+
+          // Sum step counts
+          var steps = _.map(funnelData, function(step) {
+            return {
+              event: _.first(_.values(step)).event,
+              count: _.sum(_.pluck(step, 'count'))
+            };
+          });
+
+          // Add nodes
+          _.each(steps, function(step, i) {
+            step = _.clone(step); // copy step so that it isn't modified
+            var event = step.event;
+            var count = step.count;
+
+            if (_.has(nodesMap, event)) { // if the node already exists check its count
+              // Each node's count should be the max value it has in any funnel
+              nodesMap[event].count = _.max([nodesMap[event].count, count]);
+            } else if (count) { // otherwise create node if it has a non-zero count
+              // add the new node to our data structures
+              nodesMap[event] = step;
+              nodesArray.push(step);
+            }
+          });
+
+          // Add links
+          _.each(steps, function(step, i) {
+            var nextStep = steps[i + 1];
+
+            // Only create a link if nextStep exists and has a non-zero count
+            if (nextStep && nextStep.count && _.has(nodesMap, nextStep.event)) {
+
+              // Only create a link if one doesn't exist for these two events yet
+              if (!_.has(linksMap, step.event + '-' + nextStep.event)) {
+                var link = {
+                  // link target and source values are set as corresponding nodes
+                  source: nodesMap[step.event],
+                  target: nodesMap[nextStep.event],
+                  count: nextStep.count // link count is the target node count
+                };
+                // add the new link to our data structures
+                linksMap[step.event + '-' + nextStep.event] = link;
+                linksArray.push(link);
+              }
+            }
+          });
+
+          console.log('Nodes:');
+          console.log(nodesArray);
+          console.log('Links:');
+          console.log(linksArray);
         });
       };
 
@@ -41,6 +92,23 @@
           runQuery(eventsArray);
         }
       });
+      
+      var width = 960;  // SVG element width
+      var height = 640; // SVG element height
+
+      var svg = d3.select("body").append("svg") // the SVG element
+          .attr("width", width)
+          .attr("height", height);
+
+      var linkElements = svg.selectAll(".link"); // the link elements
+      var nodeElements = svg.selectAll(".node"); // the node elements
+
+      var colorScale = d3.scale.category20(); // used with colorIndex to select a different color for each node
+      var countScale = d3.scale.linear().range([0, 40]);   // maps our link widths to values from 0px to 40px
+      var strengthScale = d3.scale.linear().range([0, 1]); // maps our link strengths to values from 0 to 1
+
+      var colorIndex = 0; // incremented to select a different color for each node
+      var nodeIndex = 0;  // incremented to be display a funnel step number in node labels
     </script>
   </body>
 </html>
