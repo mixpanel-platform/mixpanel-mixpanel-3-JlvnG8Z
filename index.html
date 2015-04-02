@@ -9,7 +9,35 @@
   <body class="mixpanel-platform-body">
     <h1>Hello, World!</h1>
     <script>
-      // Run queries and display results here
+      var eventsArray = ['$signup'];
+
+      var eventSelect = $('#eventSelect').MPEventSelect();
+
+      var runQuery = function(events) {
+        console.log('Making a funnel query with events:', events);
+
+        // Call the funnel endpoint passing events
+        // If events is ['A', 'B', 'C'], this is equivalent to calling
+        // MP.api.funnel('A', 'B', 'C') ...
+        MP.api.funnel.apply(MP.api, events).done(function(funnelData) {
+          console.log('Results:');
+          console.log(funnelData);
+        });
+      };
+
+      // Do an initial query to render the first event node
+      runQuery(eventsArray);
+
+      // When the event select changes, re-query and re-render
+      eventSelect.on('change', function() {
+        var event = eventSelect.MPEventSelect('value');
+
+        // Only add events that we aren't already querying on
+        if (!_.contains(eventsArray, event)) {
+          eventsArray.push(event); // add the new event to our events array
+          runQuery(eventsArray);
+        }
+      });
     </script>
   </body>
 </html>
