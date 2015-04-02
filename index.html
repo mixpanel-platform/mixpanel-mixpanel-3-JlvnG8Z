@@ -109,6 +109,27 @@
 
       var colorIndex = 0; // incremented to select a different color for each node
       var nodeIndex = 0;  // incremented to be display a funnel step number in node labels
+      
+      // The D3 Force Layout that calculates our node and link positions
+      // See https://github.com/mbostock/d3/wiki/Force-Layout for detailed documentation
+      var forceLayout = d3.layout.force()
+        .nodes(nodesArray) // link our node data with the layout
+        .links(linksArray) // link our link data with the layout
+        .size([width, height])
+        .charge(-120) // node repulsion/attraction - should always be negative
+        .linkDistance(300) // the distance nodes are placed from each other
+        .linkStrength(function(d) { return strengthScale(d.count); }) // set link strength based on count
+        .on('tick', function() { // a function that runs continuously to animate node and link positions
+          linkElements // update link positions
+            .attr('x1', function(d) { return d.source.x; })
+            .attr('y1', function(d) { return d.source.y; })
+            .attr('x2', function(d) { return d.target.x; })
+            .attr('y2', function(d) { return d.target.y; });
+
+          nodeElements // update node positions
+            .attr('cx', function(d) { return d.x; })
+            .attr('cy', function(d) { return d.y; });
+        });
     </script>
   </body>
 </html>
