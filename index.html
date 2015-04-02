@@ -150,8 +150,7 @@
             .attr('y2', function(d) { return d.target.y; });
 
           nodeElements // update node positions
-            .attr('cx', function(d) { return d.x; })
-            .attr('cy', function(d) { return d.y; });
+            .attr("transform", function(d) { return 'translate(' + d.x + ',' + d.y + ')'; });
         });
         
       function renderGraph() {
@@ -165,17 +164,28 @@
         nodeElements = nodeElements.data(forceLayout.nodes());
         linkElements = linkElements.data(forceLayout.links());
 
-        nodeElements.enter() // for any new node data, add corresponding node elements
-          .append('circle')
+        var nodeContainers = nodeElements.enter() // for any new node data, add corresponding node elements
+          .append('g')
             .attr('class', 'node')
+            .call(forceLayout.drag);
+
+        nodeContainers
+          .append('circle') // for each new node, add a circle element
             .attr('r', function(d) { return countScale(d.count); }) // set node circle radius
             .style('fill', function(d) { return colorScale(++colorIndex); }) // set node color
-            .call(forceLayout.drag);
+            .attr('cx', 0)
+            .attr('cy', 0);
+
+        nodeContainers
+          .append('text') // for each new node, add a label
+            .text(function(d) { return ++nodeIndex + ' ' + d.event; });
 
         linkElements.enter() // for any new link data, add corresponding link elements
           .insert('line', ':first-child') // prepend links so that they are always behind nodes
             .attr('class', 'link')
-            .style('stroke-width', function(d) { return countScale(d.count); }); // set link width based on count
+            .style('stroke-width', function(d) { return countScale(d.count); }) // set link width based on count
+            .append('title')
+              .text(function(d) { return d.count; });
 
         // (Re)start the layout - must happen any time node or link data changes
         // https://github.com/mbostock/d3/wiki/Force-Layout#start
