@@ -6,6 +6,28 @@
     <link rel="stylesheet" type="text/css" href="https://cdn.mxpnl.com/libs/mixpanel-platform/build/mixpanel-platform.v0.latest.min.css">
     <script src="https://cdn.mxpnl.com/libs/mixpanel-platform/build/mixpanel-platform.v0.latest.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/3.5.5/d3.min.js"></script> <!-- Add this line -->
+    <style>
+      svg {
+        background: #fff;
+      }
+
+      .node {
+        stroke-width: 0;
+        fill-opacity: 0.4;
+      }
+
+      .node text {
+        text-anchor: middle;
+        alignment-baseline: middle;
+        fill-opacity: 1;
+      }
+
+      .link {
+        stroke: #999;
+        stroke-opacity: .6;
+        stroke-linecap: round;
+      }
+    </style>
   </head>
   <body class="mixpanel-platform-body">
     <div class="mixpanel-platform-section">
@@ -130,6 +152,34 @@
             .attr('cx', function(d) { return d.x; })
             .attr('cy', function(d) { return d.y; });
         });
+        
+      function renderGraph() {
+        var maxCount = _.max(_.pluck(nodesArray, 'count'));
+
+        // update scale domains for the new data
+        countScale.domain([0, maxCount]);
+        strengthScale.domain([0, maxCount]);
+
+        // our data has changed - rebind layout data to SVG elements
+        nodeElements = nodeElements.data(forceLayout.nodes());
+        linkElements = linkElements.data(forceLayout.links());
+
+        nodeElements.enter() // for any new node data, add corresponding node elements
+          .append('circle')
+            .attr('class', 'node')
+            .attr('r', function(d) { return countScale(d.count); }) // set node circle radius
+            .style('fill', function(d) { return colorScale(++colorIndex); }) // set node color
+            .call(forceLayout.drag);
+
+        linkElements.enter() // for any new link data, add corresponding link elements
+          .insert('line', ':first-child') // prepend links so that they are always behind nodes
+            .attr('class', 'link')
+            .style('stroke-width', function(d) { return countScale(d.count); }); // set link width based on count
+
+        // (Re)start the layout - must happen any time node or link data changes
+        // https://github.com/mbostock/d3/wiki/Force-Layout#start
+        forceLayout.start();
+      }
     </script>
   </body>
 </html>
